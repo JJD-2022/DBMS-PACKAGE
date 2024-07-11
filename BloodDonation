@@ -1,0 +1,150 @@
+CREATE TABLE Donors (
+    DonorID VARCHAR2(4) PRIMARY KEY,
+    FirstName VARCHAR2(50) NOT NULL,
+    LastName VARCHAR2(50) NOT NULL,
+    BloodType VARCHAR2(5),
+    CHECK (BloodType IN ('A', 'B', 'AB', 'O'))
+);
+
+INSERT INTO Donors VALUES ('d001', 'Debbie', 'Lawrence', 'B');
+INSERT INTO Donors VALUES ('d002', 'Anne', 'Wilson', 'AB');
+INSERT INTO Donors VALUES ('d003', 'Derek', 'Samson', 'O');
+INSERT INTO Donors VALUES ('d004', 'Sally', 'Parker', 'A');
+INSERT INTO Donors VALUES ('d005', 'Jamison', 'Turner', 'B');
+INSERT INTO Donors VALUES ('d006', 'Mark', 'Dexter', 'O');
+INSERT INTO Donors VALUES ('d007', 'Val', 'Johnson', 'AB');
+INSERT INTO Donors VALUES ('d008', 'Marie', 'Wesley', 'A');
+INSERT INTO Donors VALUES ('d009', 'Rachel', 'Blissford', 'O');
+INSERT INTO Donors VALUES ('d010', 'Vince', 'King', 'A');
+
+CREATE TABLE Recipients (
+    RecipientID VARCHAR2(4) PRIMARY KEY,
+    FirstName VARCHAR2(50) NOT NULL,
+    LastName VARCHAR2(50) NOT NULL,
+    DonorID VARCHAR2(4),
+    BloodType VARCHAR2(5),
+    CHECK (BloodType IN ('A', 'B', 'AB', 'O')),
+    FOREIGN KEY (DonorID) REFERENCES Donors(DonorID)
+);
+
+INSERT INTO Recipients VALUES ('r001', 'John', 'Doe', 'd004', 'A');
+INSERT INTO Recipients VALUES ('r002', 'Jane', 'Smith', 'd005', 'B');
+INSERT INTO Recipients VALUES ('r003', 'Robert', 'Johnson', 'd007', 'AB');
+INSERT INTO Recipients VALUES ('r004', 'Emily', 'Williams', 'd003', 'O');
+INSERT INTO Recipients VALUES ('r005', 'David', 'Miller', 'd008', 'A');
+INSERT INTO Recipients VALUES ('r006', 'Laura', 'Davis', 'd001', 'B');
+INSERT INTO Recipients VALUES ('r007', 'Michael', 'Jones', 'd006', 'O');
+INSERT INTO Recipients VALUES ('r008', 'Amy', 'Taylor', 'd002', 'AB');
+INSERT INTO Recipients VALUES ('r009', 'Daniel', 'Anderson', 'd010', 'A');
+INSERT INTO Recipients VALUES ('r010', 'Sophia', 'Martin', 'd009', 'B');
+
+CREATE TABLE BloodDonation (
+    DonationID VARCHAR2(4) PRIMARY KEY,
+    DonorID VARCHAR2(4),
+    RecipientID VARCHAR2(4),
+    DonationDate DATE,
+    Quantity FLOAT,
+    FOREIGN KEY (DonorID) REFERENCES Donors(DonorID),
+    FOREIGN KEY (RecipientID) REFERENCES Recipients(RecipientID)
+);
+
+INSERT INTO BloodDonation VALUES ('b001', 'd007', 'r001', TO_DATE('02-Oct-2023', 'DD-MON-YYYY'), 370);
+INSERT INTO BloodDonation VALUES ('b002', 'd004', 'r002', TO_DATE('02-Oct-2023', 'DD-MON-YYYY'), 400);
+INSERT INTO BloodDonation VALUES ('b003', 'd009', 'r003', TO_DATE('02-Oct-2023', 'DD-MON-YYYY'), 470);
+INSERT INTO BloodDonation VALUES ('b004', 'd001', 'r004', TO_DATE('03-Oct-2023', 'DD-MON-YYYY'), 400);
+INSERT INTO BloodDonation VALUES ('b005', 'd010', 'r005', TO_DATE('03-Oct-2023', 'DD-MON-YYYY'), 480);
+INSERT INTO BloodDonation VALUES ('b006', 'd008', 'r006', TO_DATE('03-Oct-2023', 'DD-MON-YYYY'), 470);
+INSERT INTO BloodDonation VALUES ('b007', 'd002', 'r007', TO_DATE('03-Oct-2023', 'DD-MON-YYYY'), 400);
+INSERT INTO BloodDonation VALUES ('b008', 'd003', 'r008', TO_DATE('03-Oct-2023', 'DD-MON-YYYY'), 390);
+INSERT INTO BloodDonation VALUES ('b009', 'd005', 'r009', TO_DATE('04-Oct-2023', 'DD-MON-YYYY'), 380);
+INSERT INTO BloodDonation VALUES ('b010', 'd006', 'r010', TO_DATE('04-Oct-2023', 'DD-MON-YYYY'), 490);
+
+SELECT * FROM Donors WHERE BloodType = 'A';
+
+SELECT DonorID, FirstName, LastName, BloodType
+FROM Donors
+WHERE DonorID = (SELECT DonorID FROM BloodDonation ORDER BY Quantity DESC FETCH FIRST 1 ROW ONLY);
+
+SELECT AVG(Quantity) AS AverageDonationQuantity FROM BloodDonation;
+
+SELECT BloodType, COUNT(RecipientID) AS RecipientCount
+FROM Recipients
+GROUP BY BloodType;
+
+SELECT d.*, b.*
+FROM Donors d
+JOIN BloodDonation b ON d.DonorID = b.DonorID;
+
+SELECT d.DonorID, d.FirstName, d.LastName, d.BloodType, b.Quantity AS DonationQuantity
+FROM Donors d
+JOIN BloodDonation b ON d.DonorID = b.DonorID;
+
+SELECT d.*, r.*
+FROM Donors d
+JOIN Recipients r ON d.BloodType = r.BloodType;
+
+SELECT d.*, COUNT(b.DonationID) AS DonationCount
+FROM Donors d
+JOIN BloodDonation b ON d.DonorID = b.DonorID
+GROUP BY d.DonorID, d.FirstName, d.LastName, d.BloodType;
+
+SELECT d.*, b.*, r.*
+FROM Donors d
+JOIN BloodDonation b ON d.DonorID = b.DonorID
+LEFT JOIN Recipients r ON b.RecipientID = r.RecipientID;
+
+SELECT *
+FROM Donors, BloodDonation
+WHERE SUBSTR(Donors.DonorID, 2) = SUBSTR(BloodDonation.DonorID, 2);
+
+CREATE VIEW DonorInformation AS
+SELECT d.DonorID, d.FirstName, d.LastName, d.BloodType, COUNT(b.DonationID) AS DonationCount
+FROM Donors d
+LEFT JOIN BloodDonation b ON d.DonorID = b.DonorID
+GROUP BY d.DonorID, d.FirstName, d.LastName, d.BloodType;
+SELECT * FROM DonorInformation;
+
+CREATE VIEW DonorDonationSummary AS
+SELECT d.DonorID, d.FirstName, d.LastName, d.BloodType, SUM(b.Quantity) AS TotalDonationQuantity
+FROM Donors d
+JOIN BloodDonation b ON d.DonorID = b.DonorID
+GROUP BY d.DonorID, d.FirstName, d.LastName, d.BloodType;
+SELECT * FROM DonorDonationSummary;
+
+DECLARE
+    v_RecipientID VARCHAR2(4) := 'r001';
+    v_RecipientFirstName VARCHAR2(50);
+    v_RecipientLastName VARCHAR2(50);
+    v_RecipientBloodType VARCHAR2(5);
+BEGIN
+    SELECT FirstName, LastName, BloodType
+    INTO v_RecipientFirstName, v_RecipientLastName, v_RecipientBloodType
+    FROM Recipients
+    WHERE RecipientID = v_RecipientID;
+
+    DBMS_OUTPUT.PUT_LINE('Recipient Information - ID: ' || v_RecipientID ||
+                         ', Name: ' || v_RecipientFirstName || ' ' || v_RecipientLastName ||
+                         ', Blood Type: ' || v_RecipientBloodType);
+END;
+/
+
+DECLARE
+    CURSOR DonorCursor IS
+        SELECT * FROM Donors;
+    v_DonorID Donors.DonorID%TYPE;
+    v_FirstName Donors.FirstName%TYPE;
+    v_LastName Donors.LastName%TYPE;
+    v_BloodType Donors.BloodType%TYPE;
+BEGIN
+    OPEN DonorCursor;
+    LOOP
+        FETCH DonorCursor INTO v_DonorID, v_FirstName, v_LastName, v_BloodType;
+        EXIT WHEN DonorCursor%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('Donor ID: ' || v_DonorID || ', Name: ' ||
+                             v_FirstName || ' ' || v_LastName ||
+                             ', Blood Type: ' || v_BloodType);
+    END LOOP;
+    CLOSE DonorCursor;
+END;
+/
